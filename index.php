@@ -25,7 +25,7 @@ if(isset($_POST['configure_login']))
 		fwrite ( $handle , "define('login_DB_pass','".$_POST['DB_pass']."');\n");
 		fwrite ( $handle , "define('login_DB_name','".$_POST['DB_name']."');\n");
 		
-		fwrite ( $handle , "include(\"function.php\");\n");
+		fwrite ( $handle , "include(\"functions.php\");\n");
 						
 		fwrite ( $handle , "?>");
 	}
