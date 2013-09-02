@@ -1,6 +1,10 @@
 <?php
 
-//test
+//testar
+
+function login_login()
+{
+}
 
 function login_logout()
 {
