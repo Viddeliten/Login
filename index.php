@@ -19,6 +19,7 @@ if(isset($_POST['configure_login']))
 		
 		fwrite ( $handle , "define('login_SITE_URL','".$_POST['SITE_URL']."');\n");
 		fwrite ( $handle , "define('login_PREFIX','".$_POST['PREFIX']."');\n");
+		fwrite ( $handle , "define('login_CONFUSER','".$_POST['confuser']."');\n");
 		
 		fwrite ( $handle , "define('login_DB_host','".$_POST['DB_host']."');\n");
 		fwrite ( $handle , "define('login_DB_user','".$_POST['DB_user']."');\n");
@@ -50,6 +51,8 @@ if(file_exists("config.php"))
 		$defined=0;
 	if(!defined('login_PREFIX'))
 		$defined=0;
+	if(!defined('login_CONFUSER'))
+		$defined=0;
 
 	//Database defines
 	if(!defined('login_DB_host'))
@@ -78,7 +81,13 @@ if(!$defined)
 			<input type="text" name="SITE_URL" value="<?php if(defined('login_SITE_URL')) echo login_SITE_URL; ?>">
 			<br />
 			(The base site where you want to use this from)<br />
-
+			</p>
+			<p>
+			Confuser :
+			<input type="text" name="confuser" value="<?php if(defined('login_CONFUSER')) echo login_CONFUSER; ?>">
+			<br />
+			(A string used for encryptions of passwords. Can be anything.)<br />
+			</p>
 		<h2>Database</h2>
 			<p>
 			Host :
