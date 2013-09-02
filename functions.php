@@ -5,6 +5,8 @@
 /********************************/
 function login_receive()
 {	
+	$message=NULL;
+	
 	if(isset($_POST['login']))
 		login_login();
 
@@ -13,13 +15,18 @@ function login_receive()
 		login_display_register_form();
 	}
 	if(isset($_POST['userregister']))
-		login_register_user();
+	{
+		$message=login_register_user();
+		echo "mess: $message";
+	}
 		
 	if(isset($_POST['forgot']))
 		login_display_password_recover_form();
 		
 	if(isset($_POST['passwordreset']))
 		login_reset_password();
+		
+	return $message;
 }
 
 function login_mysql_connect()
@@ -50,7 +57,7 @@ function login_display_login_form($login_headline="Login in", $login_message="",
 		<h3>$login_headline</h3>
 		<p>$login_message</p>
 
-		<p>Username: <input type=\"text\" name=\"namn\"></p>
+		<p>Username: <input type=\"text\" name=\"username\"></p>
 		<p>Password: <input type=\"password\" name=\"password\"></p>
 		<p><input type=\"submit\" name=\"login\" value=\"Log me in!\"></p>
 		<p><input type=\"submit\" name=\"forgot\" value=\"$forgot_message\"></p>
@@ -69,10 +76,10 @@ function login_display_register_form()
 	echo "<h2>Register</h2>";
 	echo "<form method=\"post\">
 		<p>Username<br />";
-	if(isset($_POST['nick']))
-		echo "<input type=\"text\" name=\"nick\" value=\"".$_POST['nick']."\"></p>";
+	if(isset($_POST['username']))
+		echo "<input type=\"text\" name=\"username\" value=\"".$_POST['username']."\"></p>";
 	else
-		echo "<input type=\"text\" name=\"nick\"></p>";
+		echo "<input type=\"text\" name=\"username\"></p>";
 	echo "
 	<p>email<br />";
 	if(isset($_POST['email']))
@@ -89,9 +96,9 @@ function login_display_password_recover_form()
 {
 		echo "
 	<form method=\"post\">
-		<p>Reset your password? Enter your e-mail or your nickname.</p>
+		<p>Reset your password? Enter your e-mail or your username.</p>
 		<p>E-mail: <input type=\"text\" name=\"email\"></p>
-		<p>Nickname:<input type=\"text\" name=\"nickname\"></p>
+		<p>Username:<input type=\"text\" name=\"username\"></p>
 		<input type=\"submit\" name=\"passwordreset\" value=\"reset\">
 	</form>";
 }
@@ -100,7 +107,7 @@ function login_login()
 {
 	$_SESSION[login_PREFIX."inloggad"]=0;
 	
-	$sql="SELECT id,password,level FROM ".login_PREFIX."user WHERE username='".sql_safe($_POST['namn'])."' AND blocked IS NULL;";
+	$sql="SELECT id,password,level FROM ".login_PREFIX."user WHERE username='".sql_safe($_POST['username'])."' AND blocked IS NULL;";
 	// echo "<br />DEBUG1615: $sql";
 	if($uu=@mysql_query($sql))
 	{
@@ -108,7 +115,7 @@ function login_login()
 		{
 			if(!strcmp($u['password'], crypt($_POST['password'], login_CONFUSER)))
 			{
-				$_SESSION[login_PREFIX."Username"]=$_POST['namn'];
+				$_SESSION[login_PREFIX."Username"]=$_POST['username'];
 				$_SESSION[login_PREFIX."Userid"]=$u['id'];
 				$_SESSION[login_PREFIX."HTTP_USER_AGENT"] = md5($_SERVER['HTTP_USER_AGENT']);
 				$_SESSION[login_PREFIX.'password']=$_POST['password'];
@@ -149,47 +156,61 @@ function login_logout()
 
 function login_register_user()
 {
-	if($_POST['nick']!="")
+	
+	if(isset($_POST['username']) && $_POST['username']!="")
 	{
 		if(isset($_POST['email']) && $_POST['email']!="")
 		{
 			//Kolla om nicket redan finns
 			//Kolla om emailen redan finns
-			$sql="SELECT nick, email, blocked FROM ".$_SESSION["IS_prefix"]."user WHERE (nick='".sql_safe($_POST['nick'])."' OR email='".sql_safe($_POST['email'])."') AND blocked IS NULL;";
-			//echo "<br />DEBUG: $sql";
+			$sql="SELECT username, email FROM ".login_PREFIX."user WHERE (username='".sql_safe($_POST['username'])."' OR email='".sql_safe($_POST['email'])."');";
+			echo "<br />DEBUG1652: $sql";
 			if($uu=@mysql_query($sql))
 			{
 				if(mysql_affected_rows()>0)
 				{
-					DEFINE('ERROR',"Nickname or email already registered.");
+					return "Username or email already registered.";
 				}
 				else
 				{
 					$pass=password_generate(8);
-					$mess="Thankyou for signing up to Storybook.se!
-					Your info:
-					Username: $_POST[nick]
-					Password: $pass
+					$went_fine=mysql_query("INSERT INTO ".login_PREFIX."user SET username='".sql_safe($_POST['username'])."', email='".sql_safe($_POST['email'])."', password='".crypt($_POST['password'], login_CONFUSER)."';");
+					if($went_fine)
+					{
+						//Skicka ett email
+						$to = $_POST['email'];
+						$subject = "Your new registration";
+						$body="Thankyou for signing up!
+
+					Your new password is: $pass
 
 Hope to see you soon!
 					
-you recieve this email because your email was used to register at http://storybook.se If this was not done by you, simply ignore this message, and we apologize for the inconvenience.
-
-Regards,
-The Storybook Team";
-					mail($_POST['email'], "[Storybook.se] - Your password", $mess);
-					//echo "<p>$mess</p>";
-					mysql_query("INSERT INTO ".$_SESSION["IS_prefix"]."user SET nick='".sql_safe($_POST['nick'])."', email='".sql_safe($_POST['email'])."', password='".md5($pass)."', member_since='".date("YmdHis")."';");
-					DEFINE('REGISTERED',1);
-					DEFINE('MESS',"<h2>Congratulations!<h2><p>Your registration went fine. You will be notified by email at $_POST[email] soon. This email will contain your user information.</p>");
+you recieve this email because your email was used to register at ".login_SITE_URL." If this was not done by you, simply ignore this message, and we apologize for the inconvenience.
+";
+						$headers = 'From: '.login_CONTACT_EMAIL . "\r\n" .
+		'Reply-To: '.login_CONTACT_EMAIL. "\r\n" .
+		'X-Mailer: PHP/' . phpversion();
+						
+						//Send mail
+						if (mail($to, $subject, $body, $headers))
+						{
+							echo("<p>Message successfully sent!</p>");
+							return "<h2>Congratulations!<h2><p>Your registration went fine. You will be notified by email at $_POST[email] soon. This email will contain your new password.</p>";
+						}
+						else
+						{
+							echo("<p>Message delivery failed.</p>");
+						}
+					}
 				}
 			}
 		}
 		else
-			DEFINE('ERROR', "You need to enter an email adress!");		
+			return "You need to enter an email adress!";		
 	}
 	else
-		DEFINE('ERROR', "You need to have a nickname!");
+		return "You need to have a username!";
 }
 
 function login_reset_password()
