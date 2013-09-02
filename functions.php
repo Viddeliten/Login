@@ -2,4 +2,8 @@
 
 //testar
 
+function login_login()
+{
+}
+
 ?>
