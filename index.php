@@ -38,30 +38,34 @@ if(isset($_POST['configure_login']))
 /********************************************************/
 /*	Check if stuff is defined, otherwise ask for them!	*/
 /********************************************************/
+$defined=0;
+	
+if(file_exists("config.php"))
+{
+	include("config.php");
+	$defined=1;
 
-include("config.php");
-$defined=1;
+	//Some globals
+	if(!defined('login_SITE_URL'))
+		$defined=0;
+	if(!defined('login_PREFIX'))
+		$defined=0;
 
-//Some globals
-if(!defined('login_SITE_URL'))
-	$defined=0;
-if(!defined('login_PREFIX'))
-	$defined=0;
+	//Database defines
+	if(!defined('login_DB_host'))
+		$defined=0;
+	if(!defined('login_DB_user'))
+		$defined=0;
+	if(!defined('login_DB_pass'))
+		$defined=0;
+	if(!defined('login_DB_name'))
+		$defined=0;
 
-//Database defines
-if(!defined('login_DB_host'))
-	$defined=0;
-if(!defined('login_DB_user'))
-	$defined=0;
-if(!defined('login_DB_pass'))
-	$defined=0;
-if(!defined('login_DB_name'))
-	$defined=0;
-
-//Try to connect to database	
-$conn=login_mysql_connect();
-if($conn==NULL)
-	$defined=0;
+	//Try to connect to database	
+	$conn=login_mysql_connect();
+	if($conn==NULL)
+		$defined=0;
+}
 	
 if(!$defined)
 {
@@ -96,7 +100,22 @@ if(!$defined)
 else
 {
 	//Check to see if tables exists, or create them.
-	$sql="";
+	$sql="
+	CREATE TABLE IF NOT EXISTS `".login_PREFIX."user` (
+	  `id` int(11) NOT NULL AUTO_INCREMENT,
+	  `username` varchar(64) NOT NULL,
+	  `password` varchar(64) NOT NULL,
+	  `email` varchar(1024) NOT NULL,
+	  `level` int(11) NOT NULL DEFAULT '1',
+	  `created` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	  `last_login` datetime DEFAULT NULL,
+	  `deleted` datetime DEFAULT NULL,
+	  `blocked` datetime DEFAULT NULL,
+	  `delete_reason` text,
+	  `block_reason` text,
+	  PRIMARY KEY (`id`),
+	  UNIQUE KEY `username` (`username`)
+	) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;";
 	if(!mysql_query($sql))
 		$defined=0;
 }
@@ -104,6 +123,6 @@ else
 if($defined)
 	echo "Everything is allright.";
 	
-if($conn)
+if(isset($conn) && $conn)
 	mysql_close($conn);
 ?>
